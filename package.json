@@ -8,7 +8,8 @@
     "worker": "nodemon --watch 'src/workers/**/*.ts' --watch 'src/queues/**/*.ts' --exec 'ts-node' src/workers/index.ts",
     "build": "tsc",
     "start": "node dist/server.js",
-    "start:worker": "node dist/workers/index.js"
+    "start:worker": "node dist/workers/index.js",
+    "seed:admin": "ts-node src/scripts/seed-admin.ts"
   },
   "repository": {
     "type": "git",
@@ -22,15 +23,22 @@
   },
   "homepage": "https://github.com/HeitorPupim/auto-ecom-api#readme",
   "dependencies": {
+    "@fastify/cookie": "^11.0.2",
+    "@fastify/cors": "^11.1.0",
+    "@fastify/jwt": "^10.0.0",
     "@prisma/adapter-pg": "^7.0.0",
     "@prisma/client": "^7.0.0",
+    "axios": "^1.13.2",
+    "bcryptjs": "^3.0.3",
     "bullmq": "^5.64.1",
     "dotenv": "^17.2.3",
     "fastify": "^5.6.2",
     "ioredis": "^5.8.2",
-    "pg": "^8.16.3"
+    "pg": "^8.16.3",
+    "zod": "^4.1.13"
   },
   "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
     "@types/ioredis": "^4.28.10",
     "@types/node": "^24.10.1",
     "nodemon": "^3.1.11",
