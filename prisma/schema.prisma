@@ -5,10 +5,44 @@
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
 generator client {
-  provider = "prisma-client"
+  provider = "prisma-client-js"
   output   = "../src/generated/prisma"
 }
 
 datasource db {
   provider = "postgresql"
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  mercadoLibreAccounts MercadoLibreAccount[]
+}
+
+model MercadoLibreAccount {
+  id           String   @id @default(cuid())
+  userId       String
+  mlUserId     String // MercadoLibre user ID
+  nickname     String // MercadoLibre seller nickname
+  siteId       String // e.g., "MLA" (Argentina), "MLB" (Brazil)
+  accessToken  String   @db.Text // OAuth access token (will be encrypted)
+  refreshToken String   @db.Text // OAuth refresh token (will be encrypted)
+  expiresAt    DateTime // Token expiration timestamp
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Indexes
+  @@unique([userId, mlUserId]) // Prevent duplicate connections
+  @@index([userId])
+  @@index([expiresAt])
 }

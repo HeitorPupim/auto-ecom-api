@@ -20,11 +20,16 @@
   },
   "homepage": "https://github.com/HeitorPupim/auto-ecom-api#readme",
   "dependencies": {
+    "@prisma/adapter-pg": "^7.0.0",
     "@prisma/client": "^7.0.0",
+    "bullmq": "^5.64.1",
     "dotenv": "^17.2.3",
-    "fastify": "^5.6.2"
+    "fastify": "^5.6.2",
+    "ioredis": "^5.8.2",
+    "pg": "^8.16.3"
   },
   "devDependencies": {
+    "@types/ioredis": "^4.28.10",
     "@types/node": "^24.10.1",
     "nodemon": "^3.1.11",
     "prisma": "^7.0.0",
