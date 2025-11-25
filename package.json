@@ -5,8 +5,10 @@
   "main": "index.js",
   "scripts": {
     "dev": "nodemon --watch 'src/**/*.ts' --exec 'ts-node' src/server.ts",
+    "worker": "nodemon --watch 'src/workers/**/*.ts' --watch 'src/queues/**/*.ts' --exec 'ts-node' src/workers/index.ts",
     "build": "tsc",
-    "start": "node dist/server.js"
+    "start": "node dist/server.js",
+    "start:worker": "node dist/workers/index.js"
   },
   "repository": {
     "type": "git",

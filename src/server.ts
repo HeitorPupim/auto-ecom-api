@@ -1,4 +1,5 @@
 import fastify from 'fastify';
+import { webhookRoutes } from './routes/webhooks';
 
 const server = fastify({
   logger: true
@@ -11,6 +12,9 @@ server.get('/', async (request, reply) => {
 server.get('/health', async (request, reply) => {
   return { status: 'ok' };
 });
+
+// Register webhook routes
+server.register(webhookRoutes);
 
 const start = async () => {
   try {
