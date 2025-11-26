@@ -3,6 +3,7 @@ import axios from 'axios';
 import prisma from '../../lib/prisma';
 import { z } from 'zod';
 import crypto from 'crypto';
+import { mlSyncQueue } from '../../queues';
 
 const callbackSchema = z.object({
   code: z.string(),
@@ -42,7 +43,7 @@ export async function handleMercadoLibreCallback(
     if (!user) {
       console.error(`User with ID ${userId} not found`);
       const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-      return reply.redirect(`${frontendUrl}/dashboard/integrations?integration=error&message=UserNotFound`);
+      return reply.redirect(`${frontendUrl}/integrations?integration=error&message=UserNotFound`);
     }
 
     // Retrieve code_verifier from cookie
@@ -51,7 +52,7 @@ export async function handleMercadoLibreCallback(
     if (!codeVerifier) {
       console.error('Missing code_verifier cookie');
       const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-      return reply.redirect(`${frontendUrl}/dashboard/integrations?integration=error&message=MissingCodeVerifier`);
+      return reply.redirect(`${frontendUrl}/integrations?integration=error&message=MissingCodeVerifier`);
     }
 
     // Exchange code for tokens
@@ -107,12 +108,19 @@ export async function handleMercadoLibreCallback(
       },
     });
 
+    // Enqueue initial sync job
+    await mlSyncQueue.add('initial_sync', {
+      userId,
+      mlUserId: mlUserId.toString(),
+      accessToken: access_token,
+    });
+
     // Clear the cookie
     reply.clearCookie('ml_code_verifier', { path: '/' });
 
     // Redirect back to frontend
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-    return reply.redirect(`${frontendUrl}/dashboard/integrations?integration=success`);
+    return reply.redirect(`${frontendUrl}/integrations?integration=success`);
 
   } catch (error: any) {
     console.error('Error handling ML callback:', error);
@@ -120,7 +128,7 @@ export async function handleMercadoLibreCallback(
 
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
     const errorMessage = error.response?.data?.message || error.message || 'UnknownError';
-    return reply.redirect(`${frontendUrl}/dashboard/integrations?integration=error&message=${encodeURIComponent(errorMessage)}`);
+    return reply.redirect(`${frontendUrl}/integrations?integration=error&message=${encodeURIComponent(errorMessage)}`);
   }
 }
 
@@ -154,7 +162,7 @@ export async function getMercadoLibreAuthUrl(
 
     // Construct URL
     // We use .com.br as default but it works for other regions usually, or we can make it configurable
-    const authUrl = `https://auth.mercadolivre.com.br/authorization?response_type=code&client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${userId}&code_challenge=${challenge}&code_challenge_method=S256`;
+    const authUrl = `https://auth.mercadolivre.com.br/authorization?response_type=code&client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${userId}&code_challenge=${challenge}&code_challenge_method=S256&force_login=true`;
 
     return { url: authUrl };
   } catch (error) {

@@ -35,14 +35,116 @@ model MercadoLibreAccount {
   refreshToken String   @db.Text // OAuth refresh token (will be encrypted)
   expiresAt    DateTime // Token expiration timestamp
   isActive     Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+
+  // Sync Status
+  syncStatus   String    @default("idle") // idle, syncing, error
+  syncProgress Int       @default(0) // 0-100
+  lastSyncAt   DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Relations
+  user   User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orders MercadoLibreOrder[]
+  items  MercadoLibreItem[]
 
   // Indexes
   @@unique([userId, mlUserId]) // Prevent duplicate connections
   @@index([userId])
   @@index([expiresAt])
+}
+
+model MercadoLibreOrder {
+  id                    String @id @default(cuid())
+  mercadoLibreAccountId String
+  externalId            String @unique // ML Order ID
+
+  // Financials
+  totalAmount    Decimal @db.Decimal(10, 2)
+  shippingCost   Decimal @default(0) @db.Decimal(10, 2)
+  marketplaceFee Decimal @default(0) @db.Decimal(10, 2)
+  netAmount      Decimal @db.Decimal(10, 2) // total - shipping - fee
+
+  // Details
+  status        String // e.g., paid, shipped, delivered, cancelled
+  date          DateTime // Date created
+  buyerId       String?
+  buyerNickname String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  mercadoLibreAccount MercadoLibreAccount     @relation(fields: [mercadoLibreAccountId], references: [id], onDelete: Cascade)
+  items               MercadoLibreOrderItem[]
+
+  @@index([mercadoLibreAccountId])
+  @@index([date])
+  @@index([status])
+}
+
+model MercadoLibreOrderItem {
+  id      String @id @default(cuid())
+  orderId String
+
+  sku           String?
+  title         String
+  quantity      Int
+  unitPrice     Decimal @db.Decimal(10, 2)
+  fullUnitPrice Decimal @db.Decimal(10, 2) // List price
+  listingTypeId String? // e.g. gold_pro
+
+  itemId String
+
+  // Relations
+  order MercadoLibreOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  item  MercadoLibreItem  @relation(fields: [itemId], references: [id])
+
+  @@index([orderId])
+  @@index([itemId])
+  @@index([sku])
+}
+
+model MercadoLibreItem {
+  id                    String @id // ML Item ID (e.g., MLB123456789)
+  mercadoLibreAccountId String
+
+  title         String
+  price         Decimal  @db.Decimal(10, 2)
+  basePrice     Decimal  @db.Decimal(10, 2)
+  originalPrice Decimal? @db.Decimal(10, 2)
+  currencyId    String // e.g., BRL
+
+  initialQuantity   Int
+  availableQuantity Int
+  soldQuantity      Int
+
+  permalink     String
+  thumbnail     String
+  status        String // active, paused, closed
+  listingTypeId String // gold_pro, gold_special
+
+  // Details
+  sku       String?
+  gtin      String?
+  brand     String?
+  model     String?
+  condition String?
+
+  // JSON Data
+  pictures   Json?
+  attributes Json?
+  variations Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  mercadoLibreAccount MercadoLibreAccount     @relation(fields: [mercadoLibreAccountId], references: [id], onDelete: Cascade)
+  orderItems          MercadoLibreOrderItem[]
+
+  @@index([mercadoLibreAccountId])
+  @@index([status])
 }

@@ -39,23 +39,23 @@ This document outlines the development roadmap for the AutoEcom backend API buil
   ```
 
 ### BullMQ Setup
-- [ ] Install dependencies
+- [x] Install dependencies
   ```bash
   npm install bullmq ioredis
   npm install --save-dev @types/ioredis
   ```
-- [ ] Create queue infrastructure
-  - [ ] `src/queues/index.ts` - Queue setup and exports
-  - [ ] `src/queues/ml-webhook.queue.ts` - ML webhook queue
-  - [ ] `src/queues/ml-sync.queue.ts` - ML data sync queue
-  - [ ] `src/queues/tinyerp-sync.queue.ts` - TinyERP sync queue
-- [ ] Create worker processes
-  - [ ] `src/workers/ml-webhook.worker.ts` - Process ML webhooks
-  - [ ] `src/workers/ml-sync.worker.ts` - Sync ML data
-  - [ ] `src/workers/tinyerp-sync.worker.ts` - Sync TinyERP data
-- [ ] Add separate worker process script
-  - [ ] `src/workers/index.ts` - Start all workers
-  - [ ] Add npm script: `"worker": "tsx src/workers/index.ts"`
+- [x] Create queue infrastructure
+  - [x] `src/queues/index.ts` - Queue setup and exports
+  - [x] `src/queues/ml-webhook.queue.ts` - ML webhook queue
+  - [x] `src/queues/ml-sync.queue.ts` - ML data sync queue
+  - [x] `src/queues/tinyerp-sync.queue.ts` - TinyERP sync queue
+- [x] Create worker processes
+  - [x] `src/workers/ml-webhook.worker.ts` - Process ML webhooks
+  - [x] `src/workers/ml-sync.worker.ts` - Sync ML data
+  - [x] `src/workers/tinyerp-sync.worker.ts` - Sync TinyERP data
+- [x] Add separate worker process script
+  - [x] `src/workers/index.ts` - Start all workers
+  - [x] Add npm script: `"worker": "tsx src/workers/index.ts"`
 
 ### Monitoring (Optional but Recommended)
 - [ ] Install Bull Board for job monitoring
@@ -71,21 +71,21 @@ This document outlines the development roadmap for the AutoEcom backend API buil
 ## 🚀 Phase 1: Core Authentication & User Management
 
 ### User Authentication
-- [ ] Install and configure `bcrypt` for password hashing
-- [ ] Install and configure `@fastify/jwt` for token-based auth
-- [ ] Create `/auth/register` endpoint
-  - Hash passwords with bcrypt
-  - Create user in database
-  - Return JWT token
-- [ ] Create `/auth/login` endpoint
-  - Validate credentials
-  - Return JWT token
-- [ ] Create `/auth/me` endpoint (protected)
-  - Return current user info
-- [ ] Implement JWT authentication middleware
-- [ ] Install and configure `zod` for request validation
-- [ ] Create Zod schemas for auth endpoints (register, login)
-- [ ] Add request validation middleware using Zod schemas
+- [x] Install and configure `bcrypt` for password hashing
+- [x] Install and configure `@fastify/jwt` for token-based auth
+- [x] Create `/auth/register` endpoint
+  - [x] Hash passwords with bcrypt
+  - [x] Create user in database
+  - [x] Return JWT token
+- [x] Create `/auth/login` endpoint
+  - [x] Validate credentials
+  - [x] Return JWT token
+- [x] Create `/auth/me` endpoint (protected)
+  - [x] Return current user info
+- [x] Implement JWT authentication middleware
+- [x] Install and configure `zod` for request validation
+- [x] Create Zod schemas for auth endpoints (register, login)
+- [x] Add request validation middleware using Zod schemas
 
 ### User Management
 - [ ] Create `/users/:id` GET endpoint (protected)
@@ -97,20 +97,20 @@ This document outlines the development roadmap for the AutoEcom backend API buil
 ## 🔗 Phase 2: MercadoLibre OAuth Integration
 
 ### OAuth Flow
-- [ ] Research and document ML OAuth flow
-- [ ] Create ML app credentials (store in `.env`)
-- [ ] Create `/ml/auth/start` endpoint
-  - Generate authorization URL
-  - Store state parameter for security
-- [ ] Create `/ml/auth/callback` endpoint
-  - Exchange code for access_token
-  - Fetch ML user info (`/users/me`)
-  - Store account in `MercadoLibreAccount` table
-  - Associate with logged-in user
-- [ ] Create `/ml/accounts` GET endpoint
-  - List user's connected ML accounts
-- [ ] Create `/ml/accounts/:id` DELETE endpoint
-  - Disconnect ML account
+- [x] Research and document ML OAuth flow
+- [x] Create ML app credentials (store in `.env`)
+- [x] Create `/ml/auth/start` endpoint
+  - [x] Generate authorization URL
+  - [x] Store state parameter for security
+- [x] Create `/ml/auth/callback` endpoint
+  - [x] Exchange code for access_token
+  - [x] Fetch ML user info (`/users/me`)
+  - [x] Store account in `MercadoLibreAccount` table
+  - [x] Associate with logged-in user
+- [x] Create `/ml/accounts` GET endpoint
+  - [x] List user's connected ML accounts
+- [x] Create `/ml/accounts/:id` DELETE endpoint
+  - [x] Disconnect ML account
 
 ### Token Management
 - [ ] Create background job to refresh expiring tokens
@@ -130,27 +130,46 @@ This document outlines the development roadmap for the AutoEcom backend API buil
 - [ ] Implement sync job to pull listings periodically
 - [ ] Create `/ml/listings/:id` GET endpoint (single listing)
 
-### Orders
-- [ ] Create database model for `Order`
-- [ ] Create `/ml/orders` GET endpoint
-  - Fetch orders from ML API
-- [ ] Implement order sync job
-- [ ] Create `/ml/orders/:id` GET endpoint
+### Orders Management (Orders V2)
+- [ ] **Database Schema**
+  - `Order` model: `id`, `externalId` (ML ID), `totalAmount`, `shippingCost`, `marketplaceFee`, `netAmount`, `status`, `date`, `buyerId`.
+  - `OrderItem` model: `sku`, `title`, `quantity`, `unitPrice`, `fullUnitPrice`.
+  - Relations: `Order` -> `MercadoLibreAccount`, `Order` -> `OrderItem[]`.
+
+- [ ] **Webhook Handling (`orders_v2`)**
+  - [ ] Update `/webhooks/ml` to handle `orders_v2` topic.
+  - [ ] Enqueue `ml-sync` job with `resource` ID (Order ID).
+
+- [ ] **Order Processing Worker**
+  - [ ] Fetch full order details from `GET /orders/:id`.
+  - [ ] Fetch order feedback/payments if needed for precise fee calculation.
+  - [ ] Calculate financial breakdown:
+    - `total`: Gross amount paid by buyer.
+    - `shipping`: Cost of shipping (if paid by seller).
+    - `fee`: Marketplace commission (listing fee + taxes).
+    - `net`: `total` - `shipping` - `fee`.
+  - [ ] Upsert `Order` and `OrderItem`s to database.
+
+- [ ] **API Endpoints**
+  - [ ] `GET /orders`: List orders with pagination, sorting, and filters.
+    - Filters: `dateRange`, `status`, `accountId`, `channel`.
+  - [ ] `GET /orders/:id`: Get single order details with items.
+
 
 ### Webhooks
-- [ ] Create `/webhooks/ml` POST endpoint
-  - **FAST RESPONSE REQUIRED** (<500ms)
-  - Validate ML webhook signature
-  - Add job to BullMQ queue immediately
-  - Return 200 OK (under 100ms total)
+- [x] Create `/webhooks/ml` POST endpoint
+  - [x] **FAST RESPONSE REQUIRED** (<500ms)
+  - [x] Validate ML webhook signature
+  - [x] Add job to BullMQ queue immediately
+  - [x] Return 200 OK (under 100ms total)
 - [ ] Implement webhook signature validation
   - Use ML secret key from `.env`
   - Verify `x-signature` header
-- [ ] Create webhook processor (BullMQ worker)
-  - Handle notifications (new order, listing update, etc.)
-  - Fetch full data from ML API
-  - Update database accordingly
-  - Retry logic for failures
+- [x] Create webhook processor (BullMQ worker)
+  - [x] Handle notifications (new order, listing update, etc.)
+  - [ ] Fetch full data from ML API
+  - [ ] Update database accordingly
+  - [x] Retry logic for failures
 - [ ] Register webhook URLs with ML API
 - [ ] Handle different webhook topics:
   - `orders` - New orders, status changes

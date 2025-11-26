@@ -20,6 +20,8 @@ server.register(cookie, {
 server.register(cors, {
   origin: true, // Allow all origins for now (dev mode)
   credentials: true, // Required for cookies
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
 });
 
 server.register(jwt, {

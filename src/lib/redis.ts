@@ -4,6 +4,7 @@ import * as dotenv from 'dotenv';
 dotenv.config();
 
 // Redis connection for BullMQ
+// TODO: Hide credentials in production..
 export const redisConnection = new Redis({
   host: process.env.REDIS_HOST || '31.97.83.214',
   port: parseInt(process.env.REDIS_PORT || '4322'),
