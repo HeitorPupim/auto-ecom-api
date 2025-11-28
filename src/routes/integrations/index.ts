@@ -28,12 +28,25 @@ export async function integrationRoutes(fastify: FastifyInstance) {
       }
     });
 
-    // In the future, we will fetch Shopee and TinyERP accounts here too
+    const tinyAccounts = await prisma.tinyERPAccount.findMany({
+      where: { userId },
+      select: {
+        id: true,
+        isActive: true,
+        syncStatus: true,
+        syncProgress: true,
+        lastSyncAt: true,
+      }
+    });
 
     return {
       mercadolibre: mlAccounts,
       shopee: [],
-      tinyerp: [],
+      tinyerp: tinyAccounts.map(acc => ({
+        ...acc,
+        nickname: 'TinyERP Account', // TinyERP doesn't have a nickname in the same way
+        accountId: acc.id,
+      })),
     };
   });
 
@@ -51,34 +64,39 @@ export async function integrationRoutes(fastify: FastifyInstance) {
 
     console.log(`Attempting to delete integration ${id} for user ${userId}`);
 
-    // Verify ownership
-    const account = await prisma.mercadoLibreAccount.findUnique({
+    // Verify ownership (MercadoLibre)
+    const mlAccount = await prisma.mercadoLibreAccount.findUnique({
       where: { id },
     });
 
-    if (!account || account.userId !== userId) {
-      return reply.code(404).send({ error: 'Account not found' });
+    if (mlAccount && mlAccount.userId === userId) {
+      // Revoke authorization on MercadoLibre side
+      try {
+        await axios.delete(`https://api.mercadolibre.com/users/${mlAccount.mlUserId}/applications/${process.env.ML_CLIENT_ID}`, {
+          headers: {
+            Authorization: `Bearer ${mlAccount.accessToken}`,
+          },
+        });
+        console.log(`Revoked ML authorization for user ${mlAccount.mlUserId}`);
+      } catch (error: any) {
+        console.error('Failed to revoke ML authorization:', error.response?.data || error.message);
+      }
+
+      await prisma.mercadoLibreAccount.delete({ where: { id } });
+      return { success: true };
     }
 
-    // Revoke authorization on MercadoLibre side
-    try {
-      await axios.delete(`https://api.mercadolibre.com/users/${account.mlUserId}/applications/${process.env.ML_CLIENT_ID}`, {
-        headers: {
-          Authorization: `Bearer ${account.accessToken}`,
-        },
-      });
-      console.log(`Revoked ML authorization for user ${account.mlUserId}`);
-    } catch (error: any) {
-      console.error('Failed to revoke ML authorization:', error.response?.data || error.message);
-      // Continue with deletion even if revocation fails (token might be already invalid)
-    }
-
-    // Delete
-    await prisma.mercadoLibreAccount.delete({
+    // Verify ownership (TinyERP)
+    const tinyAccount = await prisma.tinyERPAccount.findUnique({
       where: { id },
     });
 
-    return { success: true };
+    if (tinyAccount && tinyAccount.userId === userId) {
+      await prisma.tinyERPAccount.delete({ where: { id } });
+      return { success: true };
+    }
+
+    return reply.code(404).send({ error: 'Account not found' });
   });
 
 
@@ -94,22 +112,37 @@ export async function integrationRoutes(fastify: FastifyInstance) {
     const { id: userId } = request.user as { id: string };
     const { id } = request.params as { id: string };
 
-    // Verify ownership
-    const account = await prisma.mercadoLibreAccount.findUnique({
+    // Check MercadoLibre
+    const mlAccount = await prisma.mercadoLibreAccount.findUnique({
       where: { id },
     });
 
-    if (!account || account.userId !== userId) {
-      return reply.code(404).send({ error: 'Account not found' });
+    if (mlAccount && mlAccount.userId === userId) {
+      await mlSyncQueue.add('initial_sync', {
+        userId,
+        mlUserId: mlAccount.mlUserId,
+        accessToken: mlAccount.accessToken,
+      });
+      return { success: true, message: 'MercadoLibre sync started' };
     }
 
-    // Trigger sync
-    await mlSyncQueue.add('initial_sync', {
-      userId,
-      mlUserId: account.mlUserId,
-      accessToken: account.accessToken,
+    // Check TinyERP
+    const tinyAccount = await prisma.tinyERPAccount.findUnique({
+      where: { id },
     });
 
-    return { success: true, message: 'Sync started' };
+    if (tinyAccount && tinyAccount.userId === userId) {
+      // Import queue dynamically or use the imported instance if available
+      const { tinyerpSyncQueue } = await import('../../workers/tinyerp-sync.worker');
+
+      await tinyerpSyncQueue.add('sync_products', {
+        userId,
+        accountId: tinyAccount.id,
+        syncType: 'product',
+      });
+      return { success: true, message: 'TinyERP sync started' };
+    }
+
+    return reply.code(404).send({ error: 'Account not found' });
   });
 }

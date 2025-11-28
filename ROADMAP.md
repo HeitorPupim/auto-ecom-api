@@ -184,16 +184,16 @@ This document outlines the development roadmap for the AutoEcom backend API buil
 > **API Documentation:** https://erp.tiny.com.br/public-api/v3/swagger/index.html#/
 
 ### OAuth/API Setup
-- [ ] Research TinyERP API authentication (API Token-based)
-- [ ] Create database model for `TinyERPAccount`
+- [x] Research TinyERP API authentication (API Token-based)
+- [x] Create database model for `TinyERPAccount`
   - Store API token, account info, isActive status
-- [ ] Create `/tinyerp/auth/connect` endpoint
+- [x] Create `/tinyerp/auth/connect` endpoint
   - Validate and store API token
   - Fetch account info from TinyERP
   - Associate with logged-in user
-- [ ] Create `/tinyerp/accounts` GET endpoint
+- [x] Create `/tinyerp/accounts` GET endpoint
   - List user's connected TinyERP accounts
-- [ ] Create `/tinyerp/accounts/:id` DELETE endpoint
+- [x] Create `/tinyerp/accounts/:id` DELETE endpoint
   - Disconnect TinyERP account
 
 ### Products Sync
@@ -202,7 +202,7 @@ This document outlines the development roadmap for the AutoEcom backend API buil
 - [ ] Create `POST /tinyerp/products/sync` endpoint
   - Sync products from ML to TinyERP
   - Map ML listing fields to TinyERP product fields
-- [ ] Implement automatic product sync job
+- [x] Implement automatic product sync job
 
 ### Orders Sync
 - [ ] Create `POST /tinyerp/orders` endpoint

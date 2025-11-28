@@ -3,6 +3,7 @@ import { z } from 'zod';
 import bcrypt from 'bcryptjs';
 import prisma from '../../lib/prisma';
 import { handleMercadoLibreCallback, getMercadoLibreAuthUrl } from './mercadolibre';
+import { handleTinyERPCallback, getTinyERPAuthUrl } from './tiny';
 
 // Validation schemas
 const registerSchema = z.object({
@@ -139,4 +140,10 @@ export async function authRoutes(fastify: FastifyInstance) {
 
   // Get MercadoLibre Auth URL
   fastify.get('/auth/mercadolibre/url', getMercadoLibreAuthUrl);
+
+  // TinyERP Callback
+  fastify.get('/auth/callback/tiny', handleTinyERPCallback);
+
+  // Get TinyERP Auth URL
+  fastify.get('/auth/tiny/url', getTinyERPAuthUrl);
 }

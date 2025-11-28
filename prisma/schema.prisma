@@ -23,6 +23,57 @@ model User {
 
   // Relations
   mercadoLibreAccounts MercadoLibreAccount[]
+  tinyERPAccounts      TinyERPAccount[]
+}
+
+model TinyERPAccount {
+  id           String   @id @default(cuid())
+  userId       String
+  accessToken  String   @db.Text
+  refreshToken String   @db.Text
+  expiresAt    DateTime // Token expiration timestamp
+  isActive     Boolean  @default(true)
+
+  // Sync Status
+  syncStatus   String    @default("idle") // idle, syncing, error
+  syncProgress Int       @default(0) // 0-100
+  lastSyncAt   DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  user     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  products TinyERPProduct[]
+
+  // Indexes
+  @@unique([userId]) // One TinyERP account per user for now
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model TinyERPProduct {
+  id               String @id // TinyERP ID
+  tinyERPAccountId String
+
+  sku       String?
+  name      String
+  price     Decimal  @db.Decimal(10, 2)
+  costPrice Decimal? @db.Decimal(10, 2)
+  stock     Int      @default(0)
+  minStock  Int?
+  maxStock  Int?
+  gtin      String?
+  unit      String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  tinyERPAccount TinyERPAccount @relation(fields: [tinyERPAccountId], references: [id], onDelete: Cascade)
+
+  @@index([tinyERPAccountId])
+  @@index([sku])
 }
 
 model MercadoLibreAccount {
@@ -44,7 +95,6 @@ model MercadoLibreAccount {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Relations
   // Relations
   user   User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   orders MercadoLibreOrder[]
